@@ -8,6 +8,7 @@ $exchangeOnlineTenantId = "TheBrandAgency" #this should be the part before .mail
 $preferredDomainController = "perdc01.brandagency.com.au"
 $msolLicense = "TheBrandAgency:ENTERPRISEPACK" #Office 365 License type https://technet.microsoft.com/en-us/library/dn771770.aspx
 $msolUsageLocation = "AU"
+$exchangePowershellURI = "http://perexch02.brandagency.com.au/PowerShell/"
 
 Import-Module activedirectory
 
@@ -710,7 +711,15 @@ Start-AADSyncAndWait
 
 # Enable Remote Mailbox 
 # From: https://blogs.msdn.microsoft.com/vilath/2015/09/14/playing-with-remote-mailboxes/
-Get-ADUser $userName | where-object{$_.RecipientType -eq “User”}  | foreach {Enable-RemoteMailbox -identity $_.userprincipalname -RemoteRoutingAddress ($_.samaccountname + "@" + $exchangeOnlineTenantId + ".mail.onmicrosoft.com")}
+Write-Host "Connecting to Exchange to create remote mailbox... enter Exchange admin creds."
+$UserCredential = Get-Credential
+$Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $exchangePowershellURI -Authentication Kerberos -Credential $UserCredential
+Import-PSSession $Session
+Enable-RemoteMailbox -identity $userPrincipalName -RemoteRoutingAddress ($userName + "@" + $exchangeOnlineTenantId + ".mail.onmicrosoft.com")
+Remove-PSSession $Session
+
+Write-host "Pausing so josh can see if it worked!"
+Start-Sleep -Seconds 30
 
 # Force Azure AD sync, then wait 1 min
 Start-AADSyncAndWait
@@ -726,3 +735,6 @@ Set-MsolUserLicense -UserPrincipalName $userPrincipalName -AddLicenses $msolLice
 
 Write-Host "Don't forget to:`n 1. Check the new user's group memberships. `n 2. Check the user's UPN is correct. `n 3. Set up their photo when they start." -ForegroundColor Green
 Write-Host "Done."
+
+###Notes
+# http://www.msexchange.org/articles-tutorials/office-365/exchange-online/match-office-365-mailbox-new-premises-user-hybrid-deployment.html
