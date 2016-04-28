@@ -1,4 +1,4 @@
-﻿Write-Host "You must run this with elevated privileges (Run as Administrator)" -ForegroundColor Green
+﻿Write-Host -ForegroundColor Green "You must run this with elevated privileges (Run as Administrator)`n"
 #############
 # Variables #
 #############
@@ -9,6 +9,7 @@ $preferredDomainController = "perdc01.brandagency.com.au"
 $msolLicense = "TheBrandAgency:ENTERPRISEPACK" #Office 365 License type https://technet.microsoft.com/en-us/library/dn771770.aspx
 $msolUsageLocation = "AU"
 $exchangePowershellURI = "http://perexch02.brandagency.com.au/PowerShell/"
+$dirsyncLocation = "C:\Program Files\Microsoft Azure AD Sync\Bin\DirectorySyncClientCmd.exe"
 
 Import-Module activedirectory
 
@@ -17,10 +18,14 @@ Import-Module activedirectory
 #############
 
 function Start-AADSyncAndWait {
+    If(-Not Test-Path($dirsyncLocation)) {
+        Write-Host -ForegroundColor Red "Dirsync not found at " $dirsyncLocation. " Exit this script!"
+        Start-Sleep -Seconds 3600
+    }
     Write-Host "Starting AAD Sync"
-    & "C:\Program Files\Microsoft Azure AD Sync\Bin\DirectorySyncClientCmd.exe" delta
-    Write-Host "Waiting 60 Seconds in order to ensure attributes are correctly synced before doing things with mailboxes."
-    Start-Sleep -Seconds 60
+    & $dirsyncLocation delta
+    Write-Host "Waiting 30 Seconds in order to ensure attributes are correctly synced before doing things with mailboxes."
+    Start-Sleep -Seconds 30
 }
 
 # OU picker, taken from https://itmicah.wordpress.com/2013/10/29/active-directory-ou-picker-in-powershell/ | https://dl.dropboxusercontent.com/u/62204506/Blog/Choose-ADOrganizationalUnit.txt
@@ -655,15 +660,18 @@ function Choose-ADOrganizationalUnit
 # Get details
 #
 
-Write-Host "New User creation script. This should be run on a server that's running Azure AD Sync."
-Write-Host "First, let's get some details."
-Write-Host "Ok, let's get some user details:"
+Write-Host -ForegroundColor Green "New User creation script. This should be run on a server that's running Azure AD Sync."
+Write-Host -ForegroundColor Green "First, let's get some details:`n"
+
 $firstName = Read-Host "First name"
 $lastName = Read-Host "Surname"
-$userName = Read-Host "Username (probably " $firstName.Substring(0,1) $lastName")"
+$suggestedUsername = $firstName.Substring(0,1) + $lastName
+$suggestedUsername = ToLower($suggestedUsername)
+$userName = Read-Host "Username (probably " $suggestedUsername")"
 $emailAddress = Read-Host "Email Address"
-Write-Host "Note, this doesn't follow any Exchange email address policy, as this can be ignored by Exchange Online."
-Write-Host "Please choose which OU you would like the User to be created in..."
+
+Write-Host -ForegroundColor Green "`n Note, this doesn't follow any Exchange email address policy, as this can be ignored by Exchange Online. `n Please choose which OU you would like the User to be created in...`n"
+
 $userOU = Choose-ADOrganizationalUnit
 $office = Read-Host "Office"
 $department = Read-Host "Department"
@@ -672,6 +680,7 @@ $jobTitle = Read-Host "Job Title"
 $UPNsuffix = Read-Host "UPN extention (normally domain name FQDN)"
 $IPPhone = Read-Host "Phone extension (Required - if unknown put 999)"
 
+#set a few more variables
 $proxyAddresses = "SMTP:" + $emailAddress + ";" + "smtp:" + $userName + "@" + $exchangeOnlineTenantId + ".mail.onmicrosoft.com"
 $targetAddress = "SMTP:" + $userName + "@" + $exchangeOnlineTenantId + ".mail.onmicrosoft.com"
 $displayName = $firstName + " " + $lastName
@@ -718,8 +727,7 @@ Import-PSSession $Session
 Enable-RemoteMailbox -identity $userPrincipalName -RemoteRoutingAddress ($userName + "@" + $exchangeOnlineTenantId + ".mail.onmicrosoft.com")
 Remove-PSSession $Session
 
-Write-host "Pausing so josh can see if it worked!"
-Start-Sleep -Seconds 30
+Start-Sleep -Seconds 10
 
 # Force Azure AD sync, then wait 1 min
 Start-AADSyncAndWait
