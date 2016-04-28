@@ -666,7 +666,7 @@ Write-Host -ForegroundColor Green "First, let's get some details:`n"
 $firstName = Read-Host "First name"
 $lastName = Read-Host "Surname"
 $suggestedUsername = $firstName.Substring(0,1) + $lastName
-$suggestedUsername =$suggestedUsername.toLower
+$suggestedUsername =$suggestedUsername.toLower()
 $userName = Read-Host "Username (probably " $suggestedUsername")"
 $emailAddress = Read-Host "Email Address"
 
