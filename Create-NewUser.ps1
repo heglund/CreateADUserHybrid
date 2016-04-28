@@ -18,13 +18,13 @@ Import-Module activedirectory
 #############
 
 function Start-AADSyncAndWait {
-    If(-Not Test-Path($dirsyncLocation)) {
+    If(-Not(Test-Path($dirsyncLocation)) {
         Write-Host -ForegroundColor Red "Dirsync not found at " $dirsyncLocation. " Exit this script!"
         Start-Sleep -Seconds 3600
     }
-    Write-Host "Starting AAD Sync"
+    Write-Host -ForegroundColor Green " Starting AAD Sync"
     & $dirsyncLocation delta
-    Write-Host "Waiting 30 Seconds in order to ensure attributes are correctly synced before doing things with mailboxes."
+    Write-Host -ForegroundColor Green "`n Waiting 30 Seconds in order to ensure attributes are correctly synced before doing things with mailboxes."
     Start-Sleep -Seconds 30
 }
 
@@ -666,7 +666,7 @@ Write-Host -ForegroundColor Green "First, let's get some details:`n"
 $firstName = Read-Host "First name"
 $lastName = Read-Host "Surname"
 $suggestedUsername = $firstName.Substring(0,1) + $lastName
-$suggestedUsername = ToLower($suggestedUsername)
+$suggestedUsername =$suggestedUsername.toLower
 $userName = Read-Host "Username (probably " $suggestedUsername")"
 $emailAddress = Read-Host "Email Address"
 
@@ -677,7 +677,7 @@ $office = Read-Host "Office"
 $department = Read-Host "Department"
 $managerUserName = Read-Host "Manager's Username"
 $jobTitle = Read-Host "Job Title"
-$UPNsuffix = Read-Host "UPN extention (normally domain name FQDN)"
+$UPNsuffix = Read-Host "UPN extention (normally the part after the @ in their email)"
 $IPPhone = Read-Host "Phone extension (Required - if unknown put 999)"
 
 #set a few more variables
@@ -720,13 +720,14 @@ Start-AADSyncAndWait
 
 # Enable Remote Mailbox 
 # From: https://blogs.msdn.microsoft.com/vilath/2015/09/14/playing-with-remote-mailboxes/
-Write-Host "Connecting to Exchange to create remote mailbox... enter Exchange admin creds."
+Write-Host -ForegroundColor Green " Connecting to Exchange to create remote mailbox... `n Please enter an Exchange administrators credentials."
 $UserCredential = Get-Credential
 $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $exchangePowershellURI -Authentication Kerberos -Credential $UserCredential
 Import-PSSession $Session
 Enable-RemoteMailbox -identity $userPrincipalName -RemoteRoutingAddress ($userName + "@" + $exchangeOnlineTenantId + ".mail.onmicrosoft.com")
 Remove-PSSession $Session
 
+Write-Host -ForegroundColor Green " Pausing 10 seconds to allow Exchange properties to propogate."
 Start-Sleep -Seconds 10
 
 # Force Azure AD sync, then wait 1 min
@@ -741,7 +742,9 @@ Connect-MsolService -Credential $UserCredential
 Set-MsolUser -UserPrincipalName $userPrincipalName -UsageLocation $msolUsageLocation
 Set-MsolUserLicense -UserPrincipalName $userPrincipalName -AddLicenses $msolLicense
 
-Write-Host "Don't forget to:`n 1. Check the new user's group memberships. `n 2. Check the user's UPN is correct. `n 3. Set up their photo when they start." -ForegroundColor Green
+Set-ADUser -Identity $userName -ChangePasswordAtNextLogon $true
+
+Write-Host "Don't forget to:`n 1. Check the new user's group memberships. `n 2. Set up their photo when they start." -ForegroundColor Green
 Write-Host "Done."
 
 ###Notes
