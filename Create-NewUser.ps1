@@ -742,7 +742,7 @@ Connect-MsolService -Credential $UserCredential
 Set-MsolUser -UserPrincipalName $userPrincipalName -UsageLocation $msolUsageLocation
 Set-MsolUserLicense -UserPrincipalName $userPrincipalName -AddLicenses $msolLicense
 
-Set-ADUser -Identity $userName -ChangePasswordAtNextLogon $true
+Set-ADUser -Identity $userName -ChangePasswordAtLogon $true
 
 Write-Host "Don't forget to:`n 1. Check the new user's group memberships. `n 2. Set up their photo when they start." -ForegroundColor Green
 Write-Host "Done."
