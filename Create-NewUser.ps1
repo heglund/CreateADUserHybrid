@@ -18,7 +18,7 @@ Import-Module activedirectory
 #############
 
 function Start-AADSyncAndWait {
-    If(-Not(Test-Path($dirsyncLocation)) {
+    If(-Not(Test-Path($dirsyncLocation))) {
         Write-Host -ForegroundColor Red "Dirsync not found at " $dirsyncLocation. " Exit this script!"
         Start-Sleep -Seconds 3600
     }
@@ -746,6 +746,9 @@ Set-ADUser -Identity $userName -ChangePasswordAtNextLogon $true
 
 Write-Host "Don't forget to:`n 1. Check the new user's group memberships. `n 2. Set up their photo when they start." -ForegroundColor Green
 Write-Host "Done."
+
+Write-Host -NoNewLine 'Press any key to continue...';
+$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 
 ###Notes
 # http://www.msexchange.org/articles-tutorials/office-365/exchange-online/match-office-365-mailbox-new-premises-user-hybrid-deployment.html
